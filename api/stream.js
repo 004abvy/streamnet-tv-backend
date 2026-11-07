@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
     } catch (_) {}
   }
 
-  // 2. Fetch from Rivestream / Provider scraper engines
+  // 2. Fetch from Rivestream / Provider scraper engines (Citadel, PrimeVids, Borealis, Vanguard)
   const providers = ['citadel', 'primevids', 'borealis', 'vanguard', 'aura', 'apogee'];
   for (const provider of providers) {
     try {
@@ -66,7 +66,7 @@ module.exports = async (req, res) => {
 
       if (response.data && response.data.data && response.data.data.sources) {
         response.data.data.sources.forEach((s, idx) => {
-          if (s.url) {
+          if (s.url && !s.url.includes('BigBuckBunny')) {
             sources.push({
               id: `${provider}-${idx}`,
               name: `Server ${provider.toUpperCase()} #${idx + 1}`,
@@ -80,35 +80,35 @@ module.exports = async (req, res) => {
     } catch (_) {}
   }
 
-  // 3. Fallback high quality direct streams through Cloudflare Proxy
+  // 3. Fallback high quality HLS feature streams if external resolution is empty (Big Buck Bunny removed completely)
   if (sources.length === 0) {
     sources.push(
       {
-        id: 'fast-4k',
-        name: 'Server 1 (Direct 4K UHD)',
+        id: 'mux-hls-4k',
+        name: 'Server 1 (Direct HLS 4K UHD)',
         quality: '4K UHD',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
         category: 'direct'
       },
       {
-        id: 'multi-audio',
-        name: 'Server 2 (Multi-Audio & Hindi Dub)',
+        id: 'unified-hls',
+        name: 'Server 2 (Unified Feature Stream 1080p)',
         quality: '1080p HD',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        url: 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
         category: 'direct'
       },
       {
-        id: 'rivestream-fast',
-        name: 'Server 3 (RiveStream High Speed)',
+        id: 'amagi-hls-1',
+        name: 'Server 3 (Amagi Live Cinema 1080p)',
         quality: '1080p HD',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+        url: 'https://amg01117-amg01117c1-amgplt0029.playout.now3.amagi.tv/playlist/amg01117-amg01117c1-amgplt0029/playlist.m3u8',
         category: 'direct'
       },
       {
-        id: 'vidlink-cdn',
-        name: 'Server 4 (VidLink Pro CDN)',
-        quality: '720p HD',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+        id: 'amagi-hls-2',
+        name: 'Server 4 (Zee Cinema HD HLS)',
+        quality: '1080p HD',
+        url: 'https://amg17931-zee-amg17931c5-samsung-au-8873.playouts.now.amagi.tv/playlist.m3u8',
         category: 'direct'
       }
     );
