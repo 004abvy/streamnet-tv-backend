@@ -19,14 +19,57 @@ module.exports = async (req, res) => {
     });
   }
 
-  const providers = ['citadel', 'primevids', 'borealis', 'vanguard', 'aura', 'apogee'];
   const sources = [];
 
-  // Attempt stream resolution from providers
+  // 1. Fetch from Crunchyroll RapidAPI if anime & keys present
+  const rapidApiKey = process.env.RAPIDAPI_KEY;
+  const rapidApiHost = process.env.RAPIDAPI_CRUNCHYROLL_HOST;
+  if (type === 'anime' && rapidApiKey && rapidApiHost) {
+    try {
+      const crRes = await axios.get(`https://${rapidApiHost}/anime/stream?id=${tmdb}`, {
+        headers: {
+          'X-RapidAPI-Key': rapidApiKey,
+          'X-RapidAPI-Host': rapidApiHost
+        },
+        timeout: 3000
+      });
+      if (crRes.data && crRes.data.streamUrl) {
+        sources.push({
+          id: 'crunchyroll-1',
+          name: 'Server Crunchyroll (Subbed & Dubbed)',
+          quality: '1080p HD',
+          url: crRes.data.streamUrl,
+          category: 'anime'
+        });
+      }
+    } catch (_) {}
+  }
+
+  // 2. Fetch from Anivexa Anime API if configured
+  const anivexaUrl = process.env.NEXT_PUBLIC_ANIVEXA_URL;
+  if (anivexaUrl) {
+    try {
+      const aniRes = await axios.get(`${anivexaUrl}/api/watch/${tmdb}`, { timeout: 3000 });
+      if (aniRes.data && aniRes.data.sources) {
+        aniRes.data.sources.forEach((s, idx) => {
+          sources.push({
+            id: `anivexa-${idx}`,
+            name: `Server Anivexa #${idx + 1}`,
+            quality: s.quality || '1080p HD',
+            url: s.url,
+            category: 'anime'
+          });
+        });
+      }
+    } catch (_) {}
+  }
+
+  // 3. Attempt stream resolution from providers (Citadel, RiveStream, VidLink)
+  const providers = ['citadel', 'primevids', 'borealis', 'vanguard', 'aura', 'apogee'];
   for (const provider of providers) {
     try {
       let target = `https://scrapper.rivestream.app/api/provider?provider=${provider}&id=${tmdb}`;
-      if (type === 'tv') {
+      if (type === 'tv' || type === 'anime') {
         target += `&season=${season}&episode=${episode}`;
       }
 
@@ -51,12 +94,10 @@ module.exports = async (req, res) => {
           }
         });
       }
-    } catch (err) {
-      // Continue next provider on timeout
-    }
+    } catch (_) {}
   }
 
-  // Fallback high quality direct streams if external resolution is empty
+  // 4. Fallback high quality direct streams if external resolution is empty
   if (sources.length === 0) {
     sources.push(
       {
