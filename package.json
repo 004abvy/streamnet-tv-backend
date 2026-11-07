@@ -1,0 +1,13 @@
+{
+  "name": "streamnet-backend-api",
+  "version": "1.0.0",
+  "description": "Streamnet Vercel Streaming Backend API for Web and Android TV",
+  "main": "api/stream.js",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "cors": "^2.8.5"
+  }
+}
