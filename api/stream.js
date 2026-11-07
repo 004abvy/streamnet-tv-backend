@@ -1,5 +1,9 @@
 const axios = require('axios');
 
+const DEFAULT_PROXY_URL = process.env.NEXT_PUBLIC_PROXY_URL || 'https://rapid-shadow-7122.abvy7661.workers.dev';
+const DEFAULT_RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '0bb4717a40msh320fc1767ac3b57p15b2c2jsn8ebc3ba3f431';
+const DEFAULT_CRUNCHYROLL_HOST = process.env.RAPIDAPI_CRUNCHYROLL_HOST || 'crunchyroll-top-anime-api-by-apirobots.p.rapidapi.com';
+
 module.exports = async (req, res) => {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,15 +25,13 @@ module.exports = async (req, res) => {
 
   const sources = [];
 
-  // 1. Fetch from Crunchyroll RapidAPI if anime & keys present
-  const rapidApiKey = process.env.RAPIDAPI_KEY;
-  const rapidApiHost = process.env.RAPIDAPI_CRUNCHYROLL_HOST;
-  if (type === 'anime' && rapidApiKey && rapidApiHost) {
+  // 1. Fetch Crunchyroll Anime streams using RapidAPI key
+  if (type === 'anime' || type === 'tv') {
     try {
-      const crRes = await axios.get(`https://${rapidApiHost}/anime/stream?id=${tmdb}`, {
+      const crRes = await axios.get(`https://${DEFAULT_CRUNCHYROLL_HOST}/anime/stream?id=${tmdb}`, {
         headers: {
-          'X-RapidAPI-Key': rapidApiKey,
-          'X-RapidAPI-Host': rapidApiHost
+          'X-RapidAPI-Key': DEFAULT_RAPIDAPI_KEY,
+          'X-RapidAPI-Host': DEFAULT_CRUNCHYROLL_HOST
         },
         timeout: 3000
       });
@@ -45,26 +47,7 @@ module.exports = async (req, res) => {
     } catch (_) {}
   }
 
-  // 2. Fetch from Anivexa Anime API if configured
-  const anivexaUrl = process.env.NEXT_PUBLIC_ANIVEXA_URL;
-  if (anivexaUrl) {
-    try {
-      const aniRes = await axios.get(`${anivexaUrl}/api/watch/${tmdb}`, { timeout: 3000 });
-      if (aniRes.data && aniRes.data.sources) {
-        aniRes.data.sources.forEach((s, idx) => {
-          sources.push({
-            id: `anivexa-${idx}`,
-            name: `Server Anivexa #${idx + 1}`,
-            quality: s.quality || '1080p HD',
-            url: s.url,
-            category: 'anime'
-          });
-        });
-      }
-    } catch (_) {}
-  }
-
-  // 3. Attempt stream resolution from providers (Citadel, RiveStream, VidLink)
+  // 2. Fetch from Rivestream / Provider scraper engines
   const providers = ['citadel', 'primevids', 'borealis', 'vanguard', 'aura', 'apogee'];
   for (const provider of providers) {
     try {
@@ -97,7 +80,7 @@ module.exports = async (req, res) => {
     } catch (_) {}
   }
 
-  // 4. Fallback high quality direct streams if external resolution is empty
+  // 3. Fallback high quality direct streams through Cloudflare Proxy
   if (sources.length === 0) {
     sources.push(
       {
@@ -137,6 +120,7 @@ module.exports = async (req, res) => {
     type,
     season,
     episode,
+    proxyUrl: DEFAULT_PROXY_URL,
     data: {
       sources
     }
